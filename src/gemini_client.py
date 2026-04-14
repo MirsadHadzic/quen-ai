@@ -1,7 +1,7 @@
 """Gemini API client for handling chat conversations."""
 
-import google.generativeai as genai
-from google.generativeai.types import content_types
+from google import genai
+from google.genai import types
 
 
 class GeminiClient:
@@ -14,8 +14,8 @@ class GeminiClient:
             api_key: Google Gemini API key.
             model_name: Name of the Gemini model to use.
         """
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model_name)
+        self.client = genai.Client(api_key=api_key)
+        self.model = model_name
         self.chat = None
 
     def start_chat(self, history: list[dict] | None = None):
@@ -24,7 +24,25 @@ class GeminiClient:
         Args:
             history: Optional list of previous messages for context.
         """
-        self.chat = self.model.start_chat(history=history or [])
+        # Convert history to Content objects for the new API
+        history_contents = None
+        if history:
+            history_contents = []
+            for msg in history:
+                role = msg.get("role", "user")
+                # Map 'model' role to 'assistant' for genai
+                if role == "model":
+                    role = "assistant"
+                history_contents.append(
+                    types.Content(role=role, parts=[types.Part.from_text(text=p)])
+                    for p in msg.get("parts", [])
+                )
+                # Flatten the generator into a list
+                history_contents[-1:] = list(history_contents[-1])
+
+        self.chat = self.client.chats.create(
+            model=self.model, history=history_contents or []
+        )
 
     def send_message(self, message: str) -> str:
         """Send a message to the Gemini model and get the response.

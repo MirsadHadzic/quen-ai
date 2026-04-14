@@ -1,18 +1,18 @@
-"""Streamlit chat application with Gemini AI."""
+"""Streamlit chat aplikacija sa Gemini AI-om."""
 
 import os
 
 import streamlit as st
 from dotenv import load_dotenv
 
-from src.gemini_client import GeminiClient
+from gemini_client import GeminiClient
 
-# Load environment variables
+# Učitaj varijable iz okruženja
 load_dotenv()
 
 
 def initialize_session_state():
-    """Initialize Streamlit session state variables."""
+    """Inicijalizuj Streamlit session state varijable."""
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "client" not in st.session_state:
@@ -20,47 +20,47 @@ def initialize_session_state():
 
 
 def setup_page():
-    """Configure the Streamlit page and title."""
+    """Konfiguriraj Streamlit stranicu i naslov."""
     st.set_page_config(
         page_title="Gemini Chatbot",
         page_icon="🤖",
         layout="centered",
     )
     st.title("🤖 Gemini Chatbot")
-    st.caption("Powered by Google Gemini AI")
+    st.caption("Pokreće Google Gemini AI")
 
 
 def get_api_key() -> str | None:
-    """Retrieve API key from environment or user input."""
+    """Preuzmi API ključ iz okruženja ili korisnikovog unosa."""
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        api_key = st.text_input("Enter your Gemini API Key:", type="password")
+        api_key = st.text_input("Unesite svoj Gemini API ključ:", type="password")
         if api_key:
             st.session_state.client = GeminiClient(api_key=api_key)
     return api_key
 
 
 def display_chat_history():
-    """Render all previous messages from session state."""
+    """Prikaži sve prethodne poruke iz session state-a."""
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
 
 def handle_user_input(prompt: str):
-    """Process user input and generate AI response.
+    """Obradi korisnikov unos i generiši AI odgovor.
 
     Args:
-        prompt: User's input message.
+        prompt: Korisnikova ulazna poruka.
     """
-    # Display user message
+    # Prikaži korisnikovu poruku
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generate and display assistant response
+    # Generiši i prikaži odgovor asistenta
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
+        with st.spinner("Razmišljam..."):
             try:
                 response = st.session_state.client.send_message(prompt)
                 st.markdown(response)
@@ -68,26 +68,26 @@ def handle_user_input(prompt: str):
                     {"role": "assistant", "content": response}
                 )
             except Exception as e:
-                st.error(f"Error: {str(e)}")
+                st.error(f"Greška: {str(e)}")
 
 
 def main():
-    """Main application entry point."""
+    """Glavna ulazna tačka aplikacije."""
     setup_page()
     initialize_session_state()
 
     api_key = get_api_key()
     if not api_key:
-        st.warning("Please provide your Gemini API key to continue.")
+        st.warning("Molimo unesite svoj Gemini API ključ za nastavak.")
         return
 
-    # Initialize client if not already done
+    # Inicijalizuj klijent ako već nije
     if st.session_state.client is None:
         st.session_state.client = GeminiClient(api_key=api_key)
 
-    # Start chat session with history
+    # Započni chat sesiju sa historijom
     if not hasattr(st.session_state, "chat_started") or not st.session_state.chat_started:
-        # Convert message history to Gemini format
+        # Pretvori historiju poruka u Gemini format
         history = []
         for msg in st.session_state.messages:
             role = "user" if msg["role"] == "user" else "model"
@@ -96,11 +96,11 @@ def main():
         st.session_state.client.start_chat(history=history)
         st.session_state.chat_started = True
 
-    # Display chat history
+    # Prikaži historiju chata
     display_chat_history()
 
-    # Handle user input
-    if prompt := st.chat_input("Type your message..."):
+    # Obradi korisnikov unos
+    if prompt := st.chat_input("Napišite svoju poruku..."):
         handle_user_input(prompt)
 
 
